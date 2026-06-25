@@ -1,0 +1,19 @@
+services:
+  notification_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: groupf_notification_service
+    ports:
+      - "3003:3003"
+    environment:
+      SERVER_PORT: 3003
+
+      RABBITMQ_HOST: host.docker.internal
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: groupf
+      RABBITMQ_PASSWORD: groupf
+
+      ORDER_EXCHANGE: order.exchange
+      NOTIFICATION_ORDER_QUEUE: notification.order.queue
+      ORDER_CREATED_ROUTING_KEY: order.created
