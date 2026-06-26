@@ -1,0 +1,53 @@
+name: Deploy Notification Service to Azure VM
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Azure VM
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.NOTIFICATION_SERVICE_SECRET }}
+          port: 22
+          script: |
+            mkdir -p ~/groupf-notification-service
+            cd ~/groupf-notification-service
+
+            cat > docker-compose.yml << 'EOF'
+            services:
+              notification_service:
+                image: farvees/groupf-notification-service:latest
+                container_name: groupf_notification_service
+                restart: always
+                ports:
+                  - "3003:3003"
+                environment:
+                  SERVER_PORT: 3003
+
+                  RABBITMQ_HOST: host.docker.internal
+                  RABBITMQ_PORT: 5672
+                  RABBITMQ_USER: groupf
+                  RABBITMQ_PASSWORD: groupf
+
+                  ORDER_EXCHANGE: order.exchange
+                  NOTIFICATION_ORDER_QUEUE: notification.order.queue
+                  ORDER_CREATED_ROUTING_KEY: order.created
+
+                extra_hosts:
+                  - "host.docker.internal:host-gateway"
+            EOF
+
+            echo "${{ secrets.DOCKER_PASSWORD }}" | sudo docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+            sudo docker compose pull
+            sudo docker compose up -d
+            sudo docker image prune -f
+            sudo docker ps
